@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "esModuleInterop": true,
+        "target": "ES2022",
+        "declaration": true,
+        "outDir": "./dist",
+        "sourceMap": true,
+        "declarationMap": true,
+        "allowSyntheticDefaultImports": true,
+        "moduleResolution": "node",
+        "strict": false
+    },
+    "include": [
+        "src/**/*"
+    ]
+}
