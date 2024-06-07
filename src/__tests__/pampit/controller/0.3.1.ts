@@ -34,41 +34,41 @@ describe(`The smart contract`, () => {
     });
   });
 
-  // it(`migrates from 0.3.0`, async () => {
-  //   const fromCodeId = await admin.upload({
-  //     contract: "pampit-controller",
-  //     build: "0.3.0",
-  //     force: true,
-  //   });
+  it(`migrates from 0.3.0`, async () => {
+    const fromCodeId = await admin.upload({
+      contract: "pampit-controller",
+      build: "0.3.0",
+      force: true,
+    });
 
-  //   const controllerCodeId = await admin.upload({
-  //     contract: "pampit-controller",
-  //     build: "0.3.1",
-  //     force: true,
-  //   });
+    const controllerCodeId = await admin.upload({
+      contract: "pampit-controller",
+      build: "0.3.1",
+      force: true,
+    });
 
-  //   const marketCodeId = await admin.upload({
-  //     contract: "pampit-market",
-  //     build: "0.3.1",
-  //     force: true,
-  //   });
+    const marketCodeId = await admin.upload({
+      contract: "pampit-market",
+      build: "0.3.1",
+      force: true,
+    });
 
-  //   const controllerAddr = await instantiateController({
-  //     quoteTokenAddress: globals.quoteTokenAddress,
-  //     cw20CodeId: globals.cw20CodeId,
-  //     codeId: fromCodeId,
-  //     marketCodeId,
-  //     admin,
-  //   });
+    const controllerAddr = await instantiateController({
+      quoteTokenAddress: globals.quoteTokenAddress,
+      cw20CodeId: globals.cw20CodeId,
+      codeId: fromCodeId,
+      marketCodeId,
+      admin,
+    });
 
-  //   await sleep(1000);
+    await sleep(1000);
 
-  //   await admin.migrate({
-  //     contractAddress: controllerAddr,
-  //     codeId: controllerCodeId,
-  //     msg: { empty: {} },
-  //   });
-  // });
+    await admin.migrate({
+      contractAddress: controllerAddr,
+      codeId: controllerCodeId,
+      msg: { empty: {} },
+    });
+  });
 
   it(`returns user activity in expected order`, async () => {
     const controllerAddr = await instantiateController({
