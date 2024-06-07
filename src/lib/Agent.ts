@@ -9,7 +9,8 @@ import {
 import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { GasPrice } from "@cosmjs/stargate";
 import { Addr, Token } from "./types";
-import { readFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
+import { existsSync } from "fs";
 
 const RPC = "http://127.0.0.1:26657";
 
@@ -126,18 +127,29 @@ export default class Agent {
     );
   }
   async upload({
-    user,
     contract,
     build,
+    force,
   }: {
-    user: Agent;
     contract: string;
     build: string;
-  }): Promise<UploadResult> {
-    const wasmPath = `./wasms/${contract}/${build}/contract.wasm`;
-    const dataBuff = await readFile(wasmPath);
-    const dataByteArray = Uint8Array.from(dataBuff);
-    return await user.client.upload(this.address, dataByteArray, "auto");
+    force?: boolean;
+  }): Promise<number> {
+    const codeIdPath = `./wasms/${contract}/${build}/code-id.txt`;
+    if (!existsSync(codeIdPath) || force) {
+      const wasmPath = `./wasms/${contract}/${build}/contract.wasm`;
+      const dataBuff = await readFile(wasmPath);
+      const dataByteArray = Uint8Array.from(dataBuff);
+      const result = await this.client.upload(
+        this.address,
+        dataByteArray,
+        "auto",
+      );
+      await writeFile(codeIdPath, result.codeId.toString());
+      return result.codeId;
+    } else {
+      return parseInt((await readFile(codeIdPath)) as any);
+    }
   }
 
   async queryBalance(token?: Token): Promise<string> {

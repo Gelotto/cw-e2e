@@ -41,3 +41,24 @@ export function fromNanoseconds(nanos: string | number): Date {
 export function show(state: any) {
   console.log(JSON.stringify(state, undefined, 2));
 }
+
+export function sleep(ms: number) {
+  new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function extractEventAttributeValue(
+  events: any,
+  typeName: string,
+  key: string,
+): string {
+  let tokenAddress: string = "";
+  for (const e of events) {
+    if (e.type === typeName) {
+      tokenAddress = e.attributes.find((a) => a.key === key)?.value ?? "";
+      if (tokenAddress.length > 0) {
+        break;
+      }
+    }
+  }
+  return tokenAddress;
+}

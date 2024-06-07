@@ -17,6 +17,7 @@
     "@cosmjs/amino": "^0.32.3",
     "@cosmjs/cosmwasm-stargate": "^0.32.3",
     "@cosmjs/tendermint-rpc": "^0.32.3",
+    "@faker-js/faker": "^8.4.1",
     "ts-jest": "^29.0.3",
     "ts-sleep": "^1.1.0"
   },
