@@ -1,7 +1,13 @@
 import { AccountData } from "@cosmjs/amino";
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { GasPrice } from "@cosmjs/stargate";
-import { DECIMALS } from "./Agent";
+import * as ecc from "tiny-secp256k1";
+import { ECPairFactory, ECPairInterface } from "ecpair";
+import * as bech32 from "bech32";
+import { defaultChainConfig } from "./Agent";
+import { Addr } from "./types";
+
+const ECPair = ECPairFactory(ecc);
 
 export function b64encode(str: string): string {
   return Buffer.from(str, "binary").toString("base64");
@@ -19,12 +25,15 @@ export function fromMicroDenom(
   amount: string | BigInt,
   decimals?: number,
 ): number {
-  return parseInt(amount.toString()) / Math.pow(10, decimals ?? DECIMALS);
+  return (
+    parseInt(amount.toString()) /
+    Math.pow(10, decimals ?? defaultChainConfig.decimals)
+  );
 }
 
 export function toMicroDenom(amount: number, decimals?: number): string {
-  return (
-    BigInt(amount) * BigInt(Math.pow(10, decimals ?? DECIMALS))
+  return BigInt(
+    Math.floor(amount * Math.pow(10, decimals ?? defaultChainConfig.decimals)),
   ).toString();
 }
 
@@ -61,4 +70,30 @@ export function extractEventAttributeValue(
     }
   }
   return tokenAddress;
+}
+
+export async function repeat(n: number, func: (i: number) => Promise<void>) {
+  for (let i = 0; i < n; ++i) {
+    await func(i);
+  }
+}
+
+export function randomAddresses({ n, prefix }: { n: number; prefix: string }) {
+  const addresses: string[] = [];
+  for (let i = 0; i < n; i++) {
+    addresses.push(generateRandomAddress(prefix));
+  }
+  return addresses;
+}
+
+function generateRandomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function generateRandomAddress(prefix: string): string {
+  const publicKeyHash = generateRandomBytes(20); // 20 bytes for the public key hash
+  const words = bech32.toWords(publicKeyHash);
+  return bech32.encode(prefix, words);
 }

@@ -3,6 +3,7 @@
 /release
 /node_modules
 /dist
+/src/secrets.ts
 **/*.rs.bk
 *.iml
 *.sw[opn]

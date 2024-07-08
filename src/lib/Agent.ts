@@ -11,45 +11,99 @@ import { GasPrice } from "@cosmjs/stargate";
 import { Addr, Token } from "./types";
 import { readFile, writeFile } from "fs/promises";
 import { existsSync } from "fs";
+import secrets from "../secrets";
 
-const RPC = "http://127.0.0.1:26657";
+export type ChainConfig = {
+  rpc: string;
+  gasPrice: GasPrice;
+  prefix: string;
+  denomMicro: string;
+  symbol: string;
+  decimals: number;
+  feeWallet: string;
+};
 
-const GAS_PRICE = GasPrice.fromString("0.004ujunox");
+export const chainConfigs: Record<string, ChainConfig> = {
+  junolocalnet: {
+    rpc: "http://127.0.0.1:26657",
+    gasPrice: GasPrice.fromString("0.004ujunox"),
+    prefix: "juno",
+    denomMicro: "ujunox",
+    symbol: "JUNOX",
+    decimals: 6,
+    feeWallet: "",
+  },
+  stargaze: {
+    rpc: "https://stargaze-rpc.publicnode.com:443",
+    gasPrice: GasPrice.fromString("1.5ustars"),
+    prefix: "stars",
+    denomMicro: "ustars",
+    symbol: "STARS",
+    decimals: 6,
+    feeWallet: "",
+  },
+  osmosis: {
+    rpc: "https://osmosis-rpc.publicnode.com:443",
+    gasPrice: GasPrice.fromString("0.025uosmo"),
+    prefix: "osmo",
+    denomMicro: "uosmo",
+    symbol: "OSMO",
+    decimals: 6,
+    feeWallet: "osmo1jume25ttjlcaqqjzjjqx9humvze3vcc8uwwmnu",
+  },
+};
 
-const PREFIX = "juno";
-
-export const DECIMALS = 6;
-
-export const DENOM_MICRO = "ujunox";
+export const defaultChainConfig = chainConfigs["junolocalnet"];
 
 export default class Agent {
   private static readonly instances: Record<string, Agent> = {};
+  readonly config: ChainConfig;
   readonly client: SigningCosmWasmClient;
   readonly address: string;
 
-  constructor(client: SigningCosmWasmClient, address: string) {
+  constructor(
+    client: SigningCosmWasmClient,
+    address: string,
+    config: ChainConfig,
+  ) {
     this.client = client;
     this.address = address;
+    this.config = config;
   }
 
-  static async connect(mnemonic: string): Promise<Agent> {
+  static async connectAdmin(chainName: string): Promise<Agent> {
+    switch (chainName) {
+      case "juno":
+      case "stargaze":
+      case "osmosis":
+        return await this.connect(
+          secrets[chainName].mnemonic,
+          chainConfigs[chainName],
+        );
+      default:
+        throw Error(`unrecognized chain name: ${chainName}`);
+    }
+  }
+
+  static async connect(mnemonic: string, config?: ChainConfig): Promise<Agent> {
+    config ??= chainConfigs["junolocalnet"];
     const key = mnemonic;
     if (this.instances[key] === undefined) {
       const signer = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
-        prefix: PREFIX,
+        prefix: config.prefix,
       });
 
       const client = await SigningCosmWasmClient.connectWithSigner(
-        RPC,
+        config.rpc,
         signer,
         {
-          gasPrice: GAS_PRICE,
+          gasPrice: config.gasPrice,
         },
       );
 
       const { address } = (await signer.getAccounts())[0];
 
-      this.instances[key] = new Agent(client, address);
+      this.instances[key] = new Agent(client, address, config);
     }
 
     return this.instances[key];
@@ -66,7 +120,7 @@ export default class Agent {
   }: {
     codeId: number;
     msg: any;
-    fee: "auto" | StdFee;
+    fee?: "auto" | StdFee;
     label?: string;
     admin?: Addr;
     funds?: Coin[];
@@ -103,7 +157,7 @@ export default class Agent {
     );
   }
 
-  async query({ contractAddress, msg }: { contractAddress: string; msg: any }) {
+  async query<T>({ contractAddress, msg }: { contractAddress: string; msg: any }): Promise<T> {
     return await this.client.queryContractSmart(contractAddress, msg);
   }
 
@@ -152,15 +206,18 @@ export default class Agent {
     }
   }
 
-  async queryBalance(token?: Token): Promise<string> {
-    token ??= { denom: DENOM_MICRO };
+  async queryBalance(token?: Token, address?: Addr): Promise<string> {
+    token ??= { denom: this.config.denomMicro };
     if (token.address) {
       const { balance } = await this.client.queryContractSmart(token.address, {
-        balance: { address: this.address },
+        balance: { address: address ?? this.address },
       });
       return balance;
     } else {
-      const coin = await this.client.getBalance(this.address, token.denom);
+      const coin = await this.client.getBalance(
+        address ?? this.address,
+        token.denom,
+      );
       return coin.amount;
     }
   }

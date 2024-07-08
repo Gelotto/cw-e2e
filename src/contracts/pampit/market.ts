@@ -49,7 +49,7 @@ export async function buy({
 }: {
   user: Agent;
   marketAddr: string;
-  quoteTokenAddr: string;
+  quoteTokenAddr?: string;
   quoteAmount: string;
   denom?: string;
 }) {
@@ -81,6 +81,23 @@ export async function buy({
     "out_amount",
   );
   return amountOut;
+}
+
+export async function refund({
+  admin,
+  marketAddr,
+}: {
+  admin: Agent;
+  marketAddr: string;
+}) {
+  return await admin.client.execute(
+    admin.address,
+    marketAddr,
+    {
+      refund: {},
+    },
+    "auto",
+  );
 }
 
 export async function queryMarketInfo({
