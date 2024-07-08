@@ -76,18 +76,19 @@ describe(`cw20-pro`, () => {
     const message = faker.word.words(5);
     const lucky = true;
 
-    const msg = {
-      render: {
-        path,
-        context: {
-          message,
-          lucky,
+    // Render the echo template with the "render" smart query
+    const html: string = await admin.query({
+      contractAddress,
+      msg: {
+        render: {
+          path,
+          context: {
+            message,
+            lucky,
+          },
         },
       },
-    };
-
-    // Render the echo template with the "render" smart query
-    const html: string = await admin.query({ contractAddress, msg });
+    });
 
     console.log(html);
   });
