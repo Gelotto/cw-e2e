@@ -2,49 +2,30 @@ import setup from "../../lib/setup";
 import Agent from "../../lib/Agent";
 import { faker } from "@faker-js/faker";
 
+`
+<div>
+<if condition="x">
+</if>
+</div>
+`;
+
 const HTML_ECHO_TEMPLATE = `
 !DOCTYPE HTML
 <html>
   <head>
-    <style type="text/css">
-      body {
-        font-family: sans-serif;
-      }
-
-      html,
-      body,
-      main {
-        height: 100%;
-        width: 100%;
-      }
-
-      main {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-      }
-
-      h1,
-      h2 {
-        padding: 0;
-        margin: 0;
-      }
-
-      h1 {
-        text-transform: uppercase;
-      }
-
-      h2 {
-        color: #999;
-      }
-    </style>
-    <title>{{ meta.title }}</title>
+    <title>{ meta.title }</title>
   </head>
   <body>
     <main>
-      <h1>{{ message }}</h1>
-      <h2>{{ meta.title }} Test Page</h2>
+      <h1>{ data.message }</h1>
+      <h2>{ meta.title } Test Page</h2>
+      <div>
+        {{ if data.lucky }}
+          You are lucky!
+        {{ else }}
+         You are NOT lucky!
+        {{ endif }}
+        </div>
     </main>
   </body>
 </html>
@@ -91,9 +72,19 @@ describe(`cw20-pro`, () => {
       },
     });
 
-    // A "message" query parameter to render in the "echo" template
+    // Some random context data
     const message = faker.word.words(5);
-    const msg = { render: { path, params: { echo: { message } } } };
+    const lucky = true;
+
+    const msg = {
+      render: {
+        path,
+        context: {
+          message,
+          lucky,
+        },
+      },
+    };
 
     // Render the echo template with the "render" smart query
     const html: string = await admin.query({ contractAddress, msg });
