@@ -1,34 +1,23 @@
 import setup from "../../lib/setup";
 import Agent from "../../lib/Agent";
 import { faker } from "@faker-js/faker";
-
-`
-<div>
-<if condition="x">
-</if>
-</div>
-`;
+import { b64encode } from "../../lib/helpers";
 
 const HTML_ECHO_TEMPLATE = `
-!DOCTYPE HTML
-<html>
-  <head>
-    <title>{ meta.title }</title>
-  </head>
-  <body>
-    <main>
-      <h1>{ data.message }</h1>
-      <h2>{ meta.title } Test Page</h2>
-      <div>
-        {{ if data.lucky }}
-          You are lucky!
-        {{ else }}
-         You are NOT lucky!
-        {{ endif }}
-        </div>
-    </main>
-  </body>
-</html>
+<body>
+  <main>
+    <h1>{ data.message }</h1>
+    <h2>{ meta.title } Test Page</h2>
+  </main>
+</body>
+`.trim();
+
+const HTML_HOME_TEMPLATE = `
+<body>
+  <main>
+    Nothing to see here!
+  </main>
+</body>
 `.trim();
 
 describe(`cw20-pro`, () => {
@@ -38,7 +27,7 @@ describe(`cw20-pro`, () => {
   let codeId: number;
 
   beforeAll(async () => {
-    const users = await setup();
+    const users = await setup({ instantiateQuoteToken: false });
     admin = users[0];
     user1 = users[1];
     user2 = users[2];
@@ -46,6 +35,7 @@ describe(`cw20-pro`, () => {
     codeId = await admin.upload({
       contract: "cw-website",
       build: "dev",
+      force: true,
     });
   });
 
@@ -55,26 +45,78 @@ describe(`cw20-pro`, () => {
       codeId,
       msg: {
         title: "Test Website",
-      },
-    });
-
-    // path string to associate with the to-be-upserted template text
-    const path = "/echo";
-
-    await admin.execute({
-      instructions: {
-        contractAddress,
-        msg: {
-          templates: {
-            upsert: { path, template: HTML_ECHO_TEMPLATE },
-          },
+        keywords: ["test", "blockchain", "cool"],
+        description: "This is a test of an on-chain website",
+        config: {
+          rest_node: "http://localhost:1317",
         },
       },
     });
 
+    console.log(contractAddress);
+
+    const path = "/echo";
+
+    await admin.execute({
+      instructions: [
+        {
+          contractAddress,
+          msg: {
+            assets: {
+              upsert: {
+                name: "test",
+                mime_type: "text/javascript",
+                data: b64encode(`console.log("it works!");`),
+              },
+            },
+          },
+        },
+        {
+          contractAddress,
+          msg: {
+            assets: {
+              upsert: {
+                name: "base",
+                mime_type: "text/css",
+                data: b64encode(
+                  `
+                body {
+                  background: black;
+                  color: white;
+                }
+              `,
+                ),
+              },
+            },
+          },
+        },
+        {
+          contractAddress,
+          msg: {
+            templates: {
+              upsert: { path, template: HTML_ECHO_TEMPLATE, styles: ["base"] },
+            },
+          },
+        },
+        {
+          contractAddress,
+          msg: {
+            templates: {
+              upsert: {
+                path: "/",
+                template: HTML_HOME_TEMPLATE,
+                styles: ["base"],
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    // path string to associate with the to-be-upserted template text
+
     // Some random context data
     const message = faker.word.words(5);
-    const lucky = true;
 
     // Render the echo template with the "render" smart query
     const html: string = await admin.query({
@@ -84,12 +126,19 @@ describe(`cw20-pro`, () => {
           path,
           context: {
             message,
-            lucky,
           },
         },
       },
     });
 
     console.log(html);
+
+    console.log(await admin.query({ contractAddress, msg: { templates: {} } }));
+    console.log(
+      await admin.query({
+        contractAddress,
+        msg: { template: { path: "/echo" } },
+      }),
+    );
   });
 });

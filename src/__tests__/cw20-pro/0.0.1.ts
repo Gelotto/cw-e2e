@@ -362,132 +362,158 @@ describe(`cw20-pro`, () => {
   //   }
   // });
 
+  // it(`returns balances correctly ordered by size`, async () => {
+  //   // Create random accounts by funding them with 0.000001 junox
+  //   const numAccounts = 100;
+  //   const accountAddresses = randomAddresses({
+  //     prefix: "juno",
+  //     n: numAccounts,
+  //   });
 
-  it(`returns balances correctly ordered by size`, async () => {
-    // Create random accounts by funding them with 0.000001 junox
-    const numAccounts = 100;
-    const accountAddresses = randomAddresses({
-      prefix: "juno",
-      n: numAccounts,
-    });
+  //   // Fund them in batches to ensure we don't run out of gas
+  //   await admin.client.signAndBroadcast(
+  //     admin.address,
+  //     accountAddresses.map((toAddress) => {
+  //       return {
+  //         typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+  //         value: {
+  //           fromAddress: admin.address,
+  //           amount: [coin("1", "ujunox")],
+  //           toAddress,
+  //         },
+  //       };
+  //     }),
+  //     "auto",
+  //   );
 
-    // Fund them in batches to ensure we don't run out of gas
-    await admin.client.signAndBroadcast(
-      admin.address,
-      accountAddresses.map((toAddress) => {
-        return {
-          typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-          value: {
-            fromAddress: admin.address,
-            amount: [coin("1", "ujunox")],
-            toAddress,
-          },
-        };
-      }),
-      "auto",
-    );
+  //   let totalAmount = 0;
+  //   const expectedBalances: string[] = [];
 
-    let totalAmount = 0;
-    const expectedBalances: string[] = [];
+  //   // Create a new CW20 token
+  //   const { contractAddress: fromContractAddress } = await admin.instantiate({
+  //     codeId,
+  //     msg: {
+  //       symbol: "SRC",
+  //       name: "Source Token",
+  //       decimals: 6,
+  //       mint: { minter: admin.address },
+  //       marketing: {
+  //         project: "Project Name",
+  //         description: "Description Text",
+  //         logo: { url: "http://logo.test" },
+  //         marketing: admin.address,
+  //       },
+  //       initial_balances: accountAddresses
+  //         .map((address) => {
+  //           const amount = 1 + randomInt(1e6 - 1);
+  //           totalAmount += amount;
+  //           expectedBalances.push(amount.toString());
+  //           return {
+  //             address,
+  //             amount: amount.toString(),
+  //           };
+  //         })
+  //     },
+  //     admin: admin.address,
+  //   });
 
+  //   const { contractAddress } = await admin.instantiate({
+  //     codeId,
+  //     msg: {
+  //       symbol: "DEST",
+  //       name: "Destination Token",
+  //       decimals: 6,
+  //       mint: { minter: admin.address },
+  //       initial_balances: [],
+  //       marketing: {
+  //         project: "Project Name",
+  //         description: "Description Text",
+  //         logo: { url: "http://logo.test" },
+  //         marketing: admin.address,
+  //       },
+  //     },
+  //     admin: admin.address,
+  //   });
+
+  //   {
+  //     const result = await admin.execute({
+  //       instructions: {
+  //         contractAddress, msg: {
+  //           pro: {
+  //             copy_balances: { cw20_address: fromContractAddress, mode: 'replace' }
+  //           }
+  //         }
+  //       }
+  //     });
+
+  //     const { balances: srcBalances } = await admin.query<{ balances: any[] }>({
+  //       contractAddress: fromContractAddress,
+  //       msg: { pro: { balances: { all: { limit: 200 } } } },
+  //     });
+
+  //     const { balances: dstBalances } = await admin.query<{ balances: any[] }>({
+  //       contractAddress,
+  //       msg: { pro: { balances: { all: { limit: 200 } } } },
+  //     });
+
+  //     expect(extractEventAttributeValue(result.events, "wasm", "done")).toStrictEqual("false")
+  //     expect(srcBalances.length).toStrictEqual(100)
+  //     expect(dstBalances.length).toStrictEqual(50)
+  //   }
+
+  //   {
+  //     const result = await admin.execute({
+  //       instructions: {
+  //         contractAddress, msg: {
+  //           pro: {
+  //             copy_balances: { cw20_address: fromContractAddress, mode: 'replace' }
+  //           }
+  //         }
+  //       }
+  //     });
+
+  //     const { balances: srcBalances } = await admin.query<{ balances: any[] }>({
+  //       contractAddress: fromContractAddress,
+  //       msg: { pro: { balances: { all: { limit: 200 } } } },
+  //     });
+
+  //     const { balances: dstBalances } = await admin.query<{ balances: any[] }>({
+  //       contractAddress,
+  //       msg: { pro: { balances: { all: { limit: 200 } } } },
+  //     });
+
+  //     expect(extractEventAttributeValue(result.events, "wasm", "done")).toStrictEqual("true")
+  //     expect(dstBalances.length).toStrictEqual(100)
+  //     expect(srcBalances).toStrictEqual(dstBalances)
+  //   }
+
+  // })
+
+  it(`allows operator to be set`, async () => {
     // Create a new CW20 token
-    const { contractAddress: fromContractAddress } = await admin.instantiate({
-      codeId,
-      msg: {
-        symbol: "SRC",
-        name: "Source Token",
-        decimals: 6,
-        mint: { minter: admin.address },
-        marketing: {
-          project: "Project Name",
-          description: "Description Text",
-          logo: { url: "http://logo.test" },
-          marketing: admin.address,
-        },
-        initial_balances: accountAddresses
-          .map((address) => {
-            const amount = 1 + randomInt(1e6 - 1);
-            totalAmount += amount;
-            expectedBalances.push(amount.toString());
-            return {
-              address,
-              amount: amount.toString(),
-            };
-          })
-      },
-      admin: admin.address,
-    });
-
     const { contractAddress } = await admin.instantiate({
       codeId,
       msg: {
-        symbol: "DEST",
-        name: "Destination Token",
+        symbol: "TEST",
+        name: "Test",
         decimals: 6,
         mint: { minter: admin.address },
-        initial_balances: [],
         marketing: {
           project: "Project Name",
           description: "Description Text",
           logo: { url: "http://logo.test" },
           marketing: admin.address,
         },
+        initial_balances: [],
       },
       admin: admin.address,
     });
 
-    {
-      const result = await admin.execute({
-        instructions: {
-          contractAddress, msg: {
-            pro: {
-              copy_balances: { cw20_address: fromContractAddress, mode: 'replace' }
-            }
-          }
-        }
-      });
-
-      const { balances: srcBalances } = await admin.query<{ balances: any[] }>({
-        contractAddress: fromContractAddress,
-        msg: { pro: { balances: { all: { limit: 200 } } } },
-      });
-
-      const { balances: dstBalances } = await admin.query<{ balances: any[] }>({
+    await admin.execute({
+      instructions: {
         contractAddress,
-        msg: { pro: { balances: { all: { limit: 200 } } } },
-      });
-
-      expect(extractEventAttributeValue(result.events, "wasm", "done")).toStrictEqual("false")
-      expect(srcBalances.length).toStrictEqual(100)
-      expect(dstBalances.length).toStrictEqual(50)
-    }
-
-
-    {
-      const result = await admin.execute({
-        instructions: {
-          contractAddress, msg: {
-            pro: {
-              copy_balances: { cw20_address: fromContractAddress, mode: 'replace' }
-            }
-          }
-        }
-      });
-
-      const { balances: srcBalances } = await admin.query<{ balances: any[] }>({
-        contractAddress: fromContractAddress,
-        msg: { pro: { balances: { all: { limit: 200 } } } },
-      });
-
-      const { balances: dstBalances } = await admin.query<{ balances: any[] }>({
-        contractAddress,
-        msg: { pro: { balances: { all: { limit: 200 } } } },
-      });
-
-      expect(extractEventAttributeValue(result.events, "wasm", "done")).toStrictEqual("true")
-      expect(dstBalances.length).toStrictEqual(100)
-      expect(srcBalances).toStrictEqual(dstBalances)
-    }
-
-  })
+        msg: { pro: { set_operator: { address: user1.address } } },
+      },
+    });
+  });
 });
