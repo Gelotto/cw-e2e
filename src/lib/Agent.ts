@@ -11,7 +11,6 @@ import { GasPrice } from "@cosmjs/stargate";
 import { Addr, Token } from "./types";
 import { readFile, writeFile } from "fs/promises";
 import { existsSync } from "fs";
-import secrets from "../secrets";
 
 export type ChainConfig = {
   rpc: string;
@@ -69,20 +68,6 @@ export default class Agent {
     this.client = client;
     this.address = address;
     this.config = config;
-  }
-
-  static async connectAdmin(chainName: string): Promise<Agent> {
-    switch (chainName) {
-      case "juno":
-      case "stargaze":
-      case "osmosis":
-        return await this.connect(
-          secrets[chainName].mnemonic,
-          chainConfigs[chainName],
-        );
-      default:
-        throw Error(`unrecognized chain name: ${chainName}`);
-    }
   }
 
   static async connect(mnemonic: string, config?: ChainConfig): Promise<Agent> {
