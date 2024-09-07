@@ -4,12 +4,8 @@ import { faker } from "@faker-js/faker";
 import { b64encode } from "../../lib/helpers";
 
 const HTML_ECHO_TEMPLATE = `
-<body>
-  <main>
-    <h1>{ data.message }</h1>
-    <h2>{ meta.title } Test Page</h2>
-  </main>
-</body>
+  <h1>{ data.message }</h1>
+  <h2>{ meta.title } Test Page</h2>
 `.trim();
 
 const HTML_HOME_TEMPLATE = `
@@ -20,7 +16,7 @@ const HTML_HOME_TEMPLATE = `
 </body>
 `.trim();
 
-describe(`cw20-pro`, () => {
+describe(`cw-website`, () => {
   let admin: Agent;
   let user1: Agent;
   let user2: Agent;
@@ -112,6 +108,8 @@ describe(`cw20-pro`, () => {
         },
       ],
     });
+
+    console.log({ contractAddress });
 
     // path string to associate with the to-be-upserted template text
 
