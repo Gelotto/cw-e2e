@@ -1,7 +1,7 @@
 import setup from "../../lib/setup";
 import Agent from "../../lib/Agent";
 import {
-  show,
+  pretty,
   fromMicroDenom,
   repeat,
   fromNanoseconds,
@@ -483,7 +483,7 @@ describe(`cw-sath`, () => {
     {
       const house = await queryHouse({ user: admin, houseAddress });
       const taxes = await queryTaxes({ user: admin, houseAddress });
-      show({ house, taxes });
+      pretty({ house, taxes });
     }
 
     const user1BalanceBefore = await user1.queryBalance();
@@ -501,7 +501,7 @@ describe(`cw-sath`, () => {
     {
       const house = await queryHouse({ user: admin, houseAddress });
       const taxes = await queryTaxes({ user: admin, houseAddress });
-      show({ house, taxes });
+      pretty({ house, taxes });
 
       expect(
         taxes.recipients.find((x) => x.address === user1.address).totals[0]

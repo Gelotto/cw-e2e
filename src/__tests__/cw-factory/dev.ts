@@ -3,7 +3,7 @@ import Agent from "../../lib/Agent";
 import {
   b64encodeObject,
   extractEventAttributeValue,
-  show,
+  pretty,
 } from "../../lib/helpers";
 import {
   ExecuteInstruction,
@@ -234,7 +234,7 @@ describe(`cw-factory`, () => {
           );
         }
         cursor = resp.cursor;
-        show({ resp, symbols });
+        pretty({ resp, symbols });
         if (!cursor) {
           break;
         }

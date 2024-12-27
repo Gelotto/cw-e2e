@@ -1,6 +1,6 @@
 import setup from "../../../lib/setup";
 import Agent, { defaultChainConfig } from "../../../lib/Agent";
-import { show, fromMicroDenom, sleep } from "../../../lib/helpers";
+import { pretty, fromMicroDenom, sleep } from "../../../lib/helpers";
 import {
   createMarket,
   fetchAccountActivity,
@@ -106,7 +106,7 @@ describe(`The smart contract`, () => {
       selector: { symbol: "TESTA-1" },
     });
 
-    show(marketInfo1);
+    pretty(marketInfo1);
   });
 
   // it(`executes a buy when using a native denom as the base token`, async () => {

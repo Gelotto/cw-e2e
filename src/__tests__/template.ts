@@ -1,6 +1,6 @@
 import setup from "../lib/setup";
 import Agent from "../lib/Agent";
-import { show, fromMicroDenom } from "../lib/helpers";
+import { pretty, fromMicroDenom } from "../lib/helpers";
 
 describe(`The smart contract`, () => {
   let admin: Agent;
@@ -15,7 +15,7 @@ describe(`The smart contract`, () => {
   });
 
   it(`does something`, async () => {
-    show({
+    pretty({
       balances: {
         admin: fromMicroDenom(await admin.queryBalance()),
         user1: fromMicroDenom(await user1.queryBalance()),

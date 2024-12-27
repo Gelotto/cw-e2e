@@ -1,6 +1,6 @@
 import setup from "../../../lib/setup";
 import Agent from "../../../lib/Agent";
-import { show, sleep } from "../../../lib/helpers";
+import { pretty, sleep } from "../../../lib/helpers";
 import {
   createMarket,
   fetchProxiedMarketInfo,

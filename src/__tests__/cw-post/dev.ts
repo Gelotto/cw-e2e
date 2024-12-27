@@ -1,6 +1,6 @@
 import setup from "../../lib/setup";
 import Agent from "../../lib/Agent";
-import { show } from "../../lib/helpers";
+import { pretty } from "../../lib/helpers";
 
 type NodeInitArgs = {
   parent_id?: string;
@@ -85,8 +85,8 @@ describe(`cw-post`, () => {
       node: { parent_id: "1", title: "Reply 1" },
     });
 
-    show(await admin.query({ contractAddress, msg: { root: {} } }));
-    show(
+    pretty(await admin.query({ contractAddress, msg: { root: {} } }));
+    pretty(
       await admin.query({
         contractAddress,
         msg: { nodes: { by_parent_id: { parent_id: "1" } } },

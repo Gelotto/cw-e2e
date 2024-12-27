@@ -1,6 +1,6 @@
 import setup from "../../../lib/setup";
 import Agent from "../../../lib/Agent";
-import { show, fromMicroDenom, sleep } from "../../../lib/helpers";
+import { pretty, fromMicroDenom, sleep } from "../../../lib/helpers";
 import {
   createMarket,
   fetchAccountActivity,
@@ -125,7 +125,7 @@ describe(`The smart contract`, () => {
 
     {
       const info = await queryMarketInfo({ user: admin, marketAddr });
-      show(info);
+      pretty(info);
     }
 
     const result = await admin.execute({
@@ -144,7 +144,7 @@ describe(`The smart contract`, () => {
 
     {
       const info = await queryMarketInfo({ user: admin, marketAddr });
-      show(info);
+      pretty(info);
     }
   });
   it(`returns user activity in expected order`, async () => {
@@ -218,6 +218,6 @@ describe(`The smart contract`, () => {
       controllerAddr,
     });
 
-    show(activity);
+    pretty(activity);
   });
 });

@@ -1,6 +1,6 @@
 import setup from "../../lib/setup";
 import Agent from "../../lib/Agent";
-import { show } from "../../lib/helpers";
+import { pretty } from "../../lib/helpers";
 
 describe(`cw-acl`, () => {
   let admin: Agent;
@@ -128,7 +128,7 @@ describe(`cw-acl`, () => {
       ],
     });
 
-    show({
+    pretty({
       roles: {
         user1: await admin.query({
           contractAddress,
@@ -208,35 +208,35 @@ describe(`cw-acl`, () => {
       ],
     });
 
-    show(
+    pretty(
       await admin.query({
         contractAddress,
         msg: { paths: { subject: "acl" } },
       }),
     );
 
-    show(
+    pretty(
       await admin.query({
         contractAddress,
         msg: { paths: { subject: { role: "test-role" } } },
       }),
     );
 
-    show(
+    pretty(
       await admin.query({
         contractAddress,
         msg: { paths: { subject: { role: "foo" } } },
       }),
     );
 
-    show(
+    pretty(
       await admin.query({
         contractAddress,
         msg: { paths: { subject: { principal: user1.address } } },
       }),
     );
 
-    show(
+    pretty(
       await admin.query({
         contractAddress,
         msg: { paths: { subject: { principal: "foo " } } },

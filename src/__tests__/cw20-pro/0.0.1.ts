@@ -1,7 +1,7 @@
 import setup from "../../lib/setup";
 import Agent from "../../lib/Agent";
 import {
-  show,
+  pretty,
   fromMicroDenom,
   randomAddresses,
   extractEventAttributeValue,

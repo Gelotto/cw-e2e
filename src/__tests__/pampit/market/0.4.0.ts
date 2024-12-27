@@ -1,6 +1,6 @@
 import setup from "../../../lib/setup";
 import Agent from "../../../lib/Agent";
-import { show, fromMicroDenom, sleep } from "../../../lib/helpers";
+import { pretty, fromMicroDenom, sleep } from "../../../lib/helpers";
 import {
   createMarket,
   fetchAccountActivity,

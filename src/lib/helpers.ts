@@ -47,7 +47,7 @@ export function fromNanoseconds(nanos: string | number): Date {
   );
 }
 
-export function show(state: any) {
+export function pretty(state: any) {
   console.log(JSON.stringify(state, undefined, 2));
 }
 
@@ -86,13 +86,13 @@ export function randomAddresses({ n, prefix }: { n: number; prefix: string }) {
   return addresses;
 }
 
-function generateRandomBytes(length: number): Uint8Array {
+export function generateRandomBytes(length: number): Uint8Array {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return bytes;
 }
 
-function generateRandomAddress(prefix: string): string {
+export function generateRandomAddress(prefix: string): string {
   const publicKeyHash = generateRandomBytes(20); // 20 bytes for the public key hash
   const words = bech32.toWords(publicKeyHash);
   return bech32.encode(prefix, words);

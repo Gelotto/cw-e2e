@@ -1,4 +1,4 @@
-import { fromMicroDenom, show, toMicroDenom } from "./helpers";
+import { fromMicroDenom, pretty, toMicroDenom } from "./helpers";
 import { globals } from "../lib/globals";
 import Agent, { defaultChainConfig } from "./Agent";
 
@@ -72,7 +72,7 @@ export default async function setup(
 
     globals.cw20CodeId = codeId;
     globals.quoteTokenAddress = result.contractAddress;
-    show({ globals });
+    pretty({ globals });
   }
 
   return [admin, user1, user2];

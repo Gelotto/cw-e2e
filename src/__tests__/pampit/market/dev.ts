@@ -1,7 +1,7 @@
 import setup from "../../../lib/setup";
 import Agent from "../../../lib/Agent";
 import {
-  show,
+  pretty,
   fromMicroDenom,
   sleep,
   randomAddresses,
@@ -179,7 +179,7 @@ describe(`The smart contract`, () => {
       });
     }
 
-    show(await admin.query({ contractAddress, msg: { graduation: {} } }));
+    pretty(await admin.query({ contractAddress, msg: { graduation: {} } }));
 
     const { contractAddress: cw20ReplacementAddr } = await admin.instantiate({
       codeId: cw20ProCodeId,
@@ -217,9 +217,9 @@ describe(`The smart contract`, () => {
         },
       });
 
-      show(result.events.slice(0, 60));
+      pretty(result.events.slice(0, 60));
 
-      show(await admin.query({ contractAddress, msg: { graduation: {} } }));
+      pretty(await admin.query({ contractAddress, msg: { graduation: {} } }));
     }
 
     // Continue graduation
@@ -236,7 +236,7 @@ describe(`The smart contract`, () => {
         msg: { graduation: {} },
       });
 
-      show(resp);
+      pretty(resp);
 
       if (resp.stage === "completed") {
         break;

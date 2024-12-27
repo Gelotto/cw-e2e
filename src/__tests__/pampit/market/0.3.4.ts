@@ -1,6 +1,6 @@
 import setup from "../../../lib/setup";
 import Agent from "../../../lib/Agent";
-import { show, fromMicroDenom, sleep } from "../../../lib/helpers";
+import { pretty, fromMicroDenom, sleep } from "../../../lib/helpers";
 import {
   createMarket,
   fetchAccountActivity,
@@ -102,7 +102,7 @@ describe(`The smart contract`, () => {
       selector: { symbol: "TESTB-1" },
     });
 
-    show(marketInfo1);
-    show(marketInfo2);
+    pretty(marketInfo1);
+    pretty(marketInfo2);
   });
 });
