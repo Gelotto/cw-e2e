@@ -8,7 +8,7 @@ describe(`The smart contract`, () => {
   let user2: Agent;
 
   beforeAll(async () => {
-    const users = await setup();
+    const users = await setup({instantiateQuoteToken: false});
     admin = users[0];
     user1 = users[1];
     user2 = users[2];

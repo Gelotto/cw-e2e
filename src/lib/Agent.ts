@@ -25,7 +25,7 @@ export type ChainConfig = {
 export const chainConfigs: Record<string, ChainConfig> = {
   junolocalnet: {
     rpc: "http://127.0.0.1:26657",
-    gasPrice: GasPrice.fromString("0.004ujunox"),
+    gasPrice: GasPrice.fromString("0.075ujunox"),
     prefix: "juno",
     denomMicro: "ujunox",
     symbol: "JUNOX",
