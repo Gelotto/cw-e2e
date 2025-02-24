@@ -4,6 +4,7 @@ import { faker } from "@faker-js/faker";
 import assert from "assert";
 import { b64encode } from "../../lib/helpers";
 import {calculateAmountToPay} from "../../lib/CwRandomhelpers";
+import { extractEventAttributeValueByKey } from "../../lib/helpers";
 
 describe(`cw-random`, () => {
   let admin: Agent;
@@ -124,7 +125,7 @@ describe(`cw-random`, () => {
 
   });
   // request randomness
-  const response = await admin.execute({
+  let response = await admin.execute({
     instructions: [
       {
         contractAddress,
@@ -135,5 +136,67 @@ describe(`cw-random`, () => {
       },
     ],
   });
+  console.log(response);
+  let first_req_id = extractEventAttributeValueByKey(response.events, "request_id");
+
+  response = await admin.execute({
+    instructions: [
+      {
+        contractAddress,
+        msg: {
+          request: request_msg
+        },
+        funds: [{ denom: "ujunox", amount: (calculateAmountToPay(request_msg,config)).toString() }],
+      },
+    ],
   });
+  console.log(response);
+  let second_request_id = extractEventAttributeValueByKey(response.events, "request_id");
+  //manual generate
+
+  response = await admin.execute({
+    instructions: [
+      {
+        contractAddress,
+        msg: {
+          generate: {
+            height_id: null,
+          }
+        },
+        funds: [{ denom: "ujunox", amount: "100" }],
+      },
+    ],
+  });
+
+  //query 
+  let response_first_query_request = await admin.query({
+    contractAddress,
+    msg: {
+      request: {
+        id: Number(first_req_id),
+      }
+    }
+  });
+  console.log(response_first_query_request);
+
+  //query 
+  let response_second_query_request = await admin.query({
+    contractAddress,
+    msg: {
+      request: {
+        id: Number(second_request_id),
+      }
+    }
+  });
+  console.log(response_second_query_request);
+
+  // query the config
+  // const configResult: { operator: string } = await admin.query({
+  //   contractAddress,
+  //   msg: {
+  //     config: {}
+  //   }
+  // });
+
+});
 });

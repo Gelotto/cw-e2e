@@ -72,6 +72,20 @@ export function extractEventAttributeValue(
   return tokenAddress;
 }
 
+export function extractEventAttributeValueByKey(
+  events: any,
+  key: string,
+): string {
+  let value: string = "";
+  for (const e of events) {
+    value = e.attributes.find((a) => a.key === key)?.value ?? "";
+    if (value.length > 0) {
+      break;
+    }
+  }
+  return value;
+}
+
 export async function repeat(n: number, func: (i: number) => Promise<void>) {
   for (let i = 0; i < n; ++i) {
     await func(i);
