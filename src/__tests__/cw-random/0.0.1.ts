@@ -28,20 +28,20 @@ describe(`cw-random`, () => {
   it(`request randomness`, async () => {
     // Create a new cw-random contract instance
   //   pub struct Config {
-  //     pub gas_to_token_ratio: u64,
-  //     pub gas_price_per_job: u64,
+  //     pub gas_to_token_ratio: Uint64,
+  //     pub gas_price_per_job: Uint64,
   //     pub denom_accepted: String,
-  //     pub max_gas_per_block: u64,
+  //     pub max_gas_per_block: Uint64,
   //     pub operator: Option<Addr,>,
   //     pub max_recipients: u16,
   //     pub max_job_per_request: u16,
   //     pub max_number_for_job: u16,
   // }
     let config = {
-      gas_to_token_ratio: 75, // it's 0.075
-      gas_price_per_job: 1000,
+      gas_to_token_ratio: BigInt(75).toString(), // it's 0.075
+      gas_price_per_job: BigInt(1000).toString(),
       denom_accepted: "ujunox",
-      max_gas_per_block: 1000000,
+      max_gas_per_block: BigInt(1000000).toString(),
       operator: null,
       max_recipients: 10,
       max_job_per_request: 10,
@@ -81,8 +81,8 @@ describe(`cw-random`, () => {
       recipients: null,
       jobs:jobs,
       prng: null,
-      gas_limit: 1000,
-      response_id: 0,
+      gas_limit: "1000",
+      response_id: "0",
     };
 
     // request randomness (this must fail because the address is not in a whitelist)
@@ -161,6 +161,7 @@ describe(`cw-random`, () => {
         msg: {
           generate: {
             height_id: null,
+            randomness: null,
           }
         },
         funds: [{ denom: "ujunox", amount: "100" }],
@@ -173,7 +174,7 @@ describe(`cw-random`, () => {
     contractAddress,
     msg: {
       request: {
-        id: Number(first_req_id),
+        id: first_req_id,
       }
     }
   });
@@ -184,7 +185,7 @@ describe(`cw-random`, () => {
     contractAddress,
     msg: {
       request: {
-        id: Number(second_request_id),
+        id: second_request_id,
       }
     }
   });
