@@ -1,0 +1,403 @@
+import setup from "../../lib/setup";
+import Agent, { defaultChainConfig } from "../../lib/Agent";
+import { faker } from "@faker-js/faker";
+import assert from "assert";
+import { b64encode } from "../../lib/helpers";
+import {calculateAmountToPay, addAddressesToWhitelist, assertError, manualGenerate} from "../../lib/CwRandomhelpers";
+import { extractEventAttributeValueByKey } from "../../lib/helpers";
+
+// function to get default roll_a_dice config
+// pub struct ConfigMsg {
+//   pub fee_percentage: String,
+//   pub random_cw_address: Addr,
+//   pub accepted_denom: String,
+//   pub operator: Option<Addr,>,
+//   pub disabled: bool,
+//   pub min_bet: String,
+//   pub gas_limit: String,
+//   pub max_bet: String,
+// }
+const ACCEPTED_DENOM = defaultChainConfig.denomMicro;
+const GAS_LIMIT = "1000" // Maximum Expected gas that must be used to resolve the game
+const MIN_BET = "10000";
+const MAX_BET = "1000000";
+const DISABLED = false;
+
+function getDefaultRollADiceConfigMsg(random_cw_address: string, operator: string | null) {
+  return {
+      fee_percentage: "5",
+      random_cw_address: random_cw_address,
+      accepted_denom: ACCEPTED_DENOM,
+      operator: operator,
+      disabled: DISABLED,
+      min_bet: MIN_BET,
+      gas_limit: GAS_LIMIT,
+      max_bet: MAX_BET,
+    };
+}
+
+function assertRollADiceConfig(config: any, expected: any) {
+  assert(config.fee_percentage == expected.fee_percentage);
+  assert(config.random_cw_address == expected.random_cw_address);
+  assert(config.accepted_denom == expected.accepted_denom);
+  assert(config.operator == expected.operator);
+  assert(config.disabled == expected.disabled);
+  assert(config.min_bet == expected.min_bet);
+  assert(config.gas_limit == expected.gas_limit);
+  assert(config.max_bet == expected.max_bet);
+}
+
+function fetchRandomCWConfig(admin:Agent, rollADiceContractAddress: string) {
+  return admin.execute({
+    instructions: [
+      {
+        contractAddress: rollADiceContractAddress,
+        msg: {
+          fetch_random_c_w_config: {
+          },
+        },
+        funds: [],
+      },
+    ],
+  });
+}
+
+
+function sendExactNumberPlayRequest(player:Agent, rollADiceContractAddress: string, funds: string, chosen_number: number) {
+  return player.execute({
+    instructions: [
+      {
+        contractAddress: rollADiceContractAddress,
+        msg: {
+          play_request: {
+            game_type: {
+              exact_number: {
+                chosen_number: chosen_number,
+              }
+            }
+          },
+        },
+        funds: [{ denom: ACCEPTED_DENOM, amount: funds }],
+      },
+    ],
+  });
+}
+
+function sendHighLowPlayRequest(player:Agent, rollADiceContractAddress: string, funds: string, dice_number: number) {
+  return player.execute({
+    instructions: [
+      {
+        contractAddress: rollADiceContractAddress,
+        msg: {
+          play_request: {
+            game_type: {
+              high_low: {
+                dice_number: dice_number,
+              }
+            }
+          },
+        },
+        funds: [{ denom: ACCEPTED_DENOM, amount: funds }],
+      },
+    ],
+  });
+}
+
+function queryGameStatus(player:Agent, rollADiceContractAddress: string, game_id: string) {
+  return player.query<{id:string,
+    status:string,
+    user_address: string,
+    bet_amount: string,
+    bet_currency: string,
+    created_at: string,
+    updated_at: string,
+    potential_winning_amount: string,
+    dice_results: string| null,
+    error_message: string,
+    game_type: any}>({
+    contractAddress: rollADiceContractAddress,
+    msg: {
+      query_game: {
+        id: game_id
+      }
+    }
+  });
+}
+
+function queryUserGames(querier:Agent, rollADiceContractAddress: string, player:string, cursor: number | null, limit: number) {  
+  return querier.query({
+    contractAddress: rollADiceContractAddress,
+    msg: {
+      user_games_query: {
+        user_address: player,
+        cursor: cursor,
+        limit: limit,
+      }
+    }
+  });
+}
+
+
+describe(`roll-a-dice`, () => {
+  let admin: Agent;
+  let user1: Agent;
+  let user2: Agent;
+  let codeId_cw_random: number;
+  let codeId_roll_a_dice: number;
+
+  beforeAll(async () => {
+    const users = await setup({ instantiateQuoteToken: false });
+    admin = users[0];
+    user1 = users[1];
+    user2 = users[2];
+
+    codeId_cw_random = await admin.upload({
+      contract: "cw-random",
+      build: "dev",
+      force: true,
+    });
+
+    codeId_roll_a_dice = await admin.upload({
+      contract: "roll-a-dice",
+      build: "dev",
+      force: true,
+    });
+
+  });
+
+  it(`play games`, async () => {
+    // Create a new cw-random contract instance
+  //   pub struct Config {
+  //     pub gas_to_token_ratio: Uint64,
+  //     pub gas_price_per_job: Uint64,
+  //     pub denom_accepted: String,
+  //     pub max_gas_per_block: Uint64,
+  //     pub operator: Option<Addr,>,
+  //     pub max_recipients: u16,
+  //     pub max_job_per_request: u16,
+  //     pub max_number_for_job: u16,
+  // }
+    let random_cw_config = {
+      gas_to_token_ratio: BigInt(75).toString(), // it's 0.075
+      gas_price_per_job: BigInt(1000).toString(),
+      denom_accepted: "ujunox",
+      max_gas_per_block: BigInt(1000000).toString(),
+      operator: null,
+      max_recipients: 10,
+      max_job_per_request: 10,
+      max_number_for_job: 10,
+    }
+    const { contractAddress: randomCWContractAddress } = await admin.instantiate({
+        codeId: codeId_cw_random,
+      msg: {
+        config: random_cw_config,
+        starting_seed: "testtest123",
+      },
+    });
+
+    
+
+    console.log(randomCWContractAddress);
+
+    let roll_a_dice_config = getDefaultRollADiceConfigMsg(randomCWContractAddress, admin.address);
+    const { contractAddress: rollADiceContractAddress } = await admin.instantiate({
+      codeId: codeId_roll_a_dice,
+      msg: {
+        config: roll_a_dice_config,
+      },
+    });
+
+    // query the config
+    const configResult: { operator: string,
+      fee_percentage: string,
+      random_cw_address: string,
+      accepted_denom: string,
+      disabled: boolean,
+      min_bet: string,
+      gas_limit: string,
+      max_bet: string
+     } = await admin.query({
+      contractAddress: rollADiceContractAddress,
+      msg: {
+        config: {}
+      }
+    });
+    console.log(configResult);
+    console.log(roll_a_dice_config);
+    assertRollADiceConfig(configResult, roll_a_dice_config);
+    // check error because CW Config is not fetched
+    assertError("RandomConfigNotSet",() => sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5));
+    console.log(await fetchRandomCWConfig(admin, rollADiceContractAddress));
+    // check error when the address is not in the whitelist, if roll-a-dice is not in the whitelist, it can't request randomness
+    // so the play request is expected to fail and refunded
+    let play_request_response = await sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5);
+    // query the game status
+    let game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
+    let game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    console.log(game_status);
+    assert(game_status.status == "refunded");
+
+    console.log(await addAddressesToWhitelist(admin, randomCWContractAddress, [rollADiceContractAddress]));
+
+    let admin_balance = await admin.queryBalance({ denom: defaultChainConfig.denomMicro }, admin.address);
+    console.log("Admin Balance: ",admin_balance);
+
+    // send some funds to the contract roll a dice to play
+    console.log(await admin.transfer({
+      token: { denom: ACCEPTED_DENOM },
+      recipient: rollADiceContractAddress,
+      amount: MAX_BET,
+    }));
+
+    // query roll a dice balance
+    let roll_a_dice_balance = await admin.queryBalance({ denom: defaultChainConfig.denomMicro }, rollADiceContractAddress);
+    console.log("Roll a Dice Balance: ",roll_a_dice_balance);
+    assert (parseInt(roll_a_dice_balance) >= Number(MAX_BET));
+
+    play_request_response = await sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5);
+    game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
+    game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    assert(game_status.status == "requested");
+
+
+    await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "1500", "testtest123", null);
+
+    game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    console.log(game_status);
+    assert(game_status.status == "won" || game_status.status == "lost" || game_status.status == "refunded");
+
+  //   let jobs = [];
+  //   let u8_job = {
+  //     u8: {
+  //       min: 0,
+  //       max: 255,
+  //       n:10
+  //     }
+  //   };
+  //   jobs.push(u8_job);
+
+  //   let request_msg = {
+  //     height : null,
+  //     recipients: null,
+  //     jobs:jobs,
+  //     prng: null,
+  //     gas_limit: "1000",
+  //     response_id: "0",
+  //   };
+
+  //   // request randomness (this must fail because the address is not in a whitelist)
+  //   try {
+  //     await admin.execute({
+  //       instructions: [
+  //         {
+  //           contractAddress,
+  //           msg: {
+  //             request: request_msg
+  //           },
+  //           funds: [{ denom: "ujunox", amount: "1" }],
+  //         },
+  //       ],
+  //     });
+  //   } catch (error) {
+  //     console.error("Expected error:", error);
+
+  //   if (error.message.includes("NotAuthorized")) {
+  //     console.log("The address is not authorized to request randomness.");
+  //   } else {
+  //     // If the error is not the expected one, rethrow it
+  //     throw error;
+  //   }
+  // }
+
+  // // Add the address to the whitelist and request randomness
+  // await admin.execute({
+  //   instructions: [
+  //     {
+  //       contractAddress,
+  //       msg: {
+  //         add_whitelisted_address_msg: {
+  //           addresses: [admin.address],
+  //         },
+  //       },
+  //       funds: [{ denom: "ujunox", amount: "1" }],
+  //     },
+  //   ],
+
+  // });
+  // // request randomness
+  // let response = await admin.execute({
+  //   instructions: [
+  //     {
+  //       contractAddress,
+  //       msg: {
+  //         request: request_msg
+  //       },
+  //       funds: [{ denom: "ujunox", amount: (calculateAmountToPay(request_msg,config)).toString() }],
+  //     },
+  //   ],
+  // });
+  // console.log(response);
+  // let first_req_id = extractEventAttributeValueByKey(response.events, "request_id");
+
+  // response = await admin.execute({
+  //   instructions: [
+  //     {
+  //       contractAddress,
+  //       msg: {
+  //         request: request_msg
+  //       },
+  //       funds: [{ denom: "ujunox", amount: (calculateAmountToPay(request_msg,config)).toString() }],
+  //     },
+  //   ],
+  // });
+  // console.log(response);
+  // let second_request_id = extractEventAttributeValueByKey(response.events, "request_id");
+  // //manual generate
+
+  // response = await admin.execute({
+  //   instructions: [
+  //     {
+  //       contractAddress,
+  //       msg: {
+  //         generate: {
+  //           height_id: null,
+  //           randomness: null,
+  //         }
+  //       },
+  //       funds: [{ denom: "ujunox", amount: "100" }],
+  //     },
+  //   ],
+  // });
+
+  // //query 
+  // let response_first_query_request = await admin.query({
+  //   contractAddress,
+  //   msg: {
+  //     request: {
+  //       id: first_req_id,
+  //     }
+  //   }
+  // });
+  // console.log(response_first_query_request);
+
+  // //query 
+  // let response_second_query_request = await admin.query({
+  //   contractAddress,
+  //   msg: {
+  //     request: {
+  //       id: second_request_id,
+  //     }
+  //   }
+  // });
+  // console.log(response_second_query_request);
+
+  // query the config
+  // const configResult: { operator: string } = await admin.query({
+  //   contractAddress,
+  //   msg: {
+  //     config: {}
+  //   }
+  // });
+
+});
+});
