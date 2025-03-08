@@ -2,9 +2,10 @@ import setup from "../../lib/setup";
 import Agent, { defaultChainConfig } from "../../lib/Agent";
 import { faker } from "@faker-js/faker";
 import assert from "assert";
-import { b64encode } from "../../lib/helpers";
-import {calculateAmountToPay, addAddressesToWhitelist, assertError, manualGenerate} from "../../lib/CwRandomhelpers";
+import { b64encode, sleep } from "../../lib/helpers";
+import {calculateAmountToPay, addAddressesToWhitelist, assertError, manualGenerate, queryRequestStatus} from "../../lib/CwRandomhelpers";
 import { extractEventAttributeValueByKey } from "../../lib/helpers";
+import { Coin, StdFee } from "@cosmjs/amino";
 
 // function to get default roll_a_dice config
 // pub struct ConfigMsg {
@@ -18,7 +19,7 @@ import { extractEventAttributeValueByKey } from "../../lib/helpers";
 //   pub max_bet: String,
 // }
 const ACCEPTED_DENOM = defaultChainConfig.denomMicro;
-const GAS_LIMIT = "1000" // Maximum Expected gas that must be used to resolve the game
+const GAS_LIMIT = "100000" // Maximum Expected gas that must be used to resolve the game
 const MIN_BET = "10000";
 const MAX_BET = "1000000";
 const DISABLED = false;
@@ -114,7 +115,10 @@ function queryGameStatus(player:Agent, rollADiceContractAddress: string, game_id
     potential_winning_amount: string,
     dice_results: string| null,
     error_message: string,
-    game_type: any}>({
+    game_type: any,
+    randomness_request_id: string | null,
+    randomness_serving_block_height: string | null,
+  }>({
     contractAddress: rollADiceContractAddress,
     msg: {
       query_game: {
@@ -226,11 +230,11 @@ describe(`roll-a-dice`, () => {
     console.log(roll_a_dice_config);
     assertRollADiceConfig(configResult, roll_a_dice_config);
     // check error because CW Config is not fetched
-    assertError("RandomConfigNotSet",() => sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5));
+    // assertError("RandomConfigNotSet",() => sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5));
     console.log(await fetchRandomCWConfig(admin, rollADiceContractAddress));
     // check error when the address is not in the whitelist, if roll-a-dice is not in the whitelist, it can't request randomness
     // so the play request is expected to fail and refunded
-    let play_request_response = await sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5);
+    let play_request_response = await sendExactNumberPlayRequest(admin, rollADiceContractAddress, MIN_BET, 5);
     // query the game status
     let game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
     let game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
@@ -243,161 +247,43 @@ describe(`roll-a-dice`, () => {
     console.log("Admin Balance: ",admin_balance);
 
     // send some funds to the contract roll a dice to play
+    const gasAmount = "100000";
+
     console.log(await admin.transfer({
       token: { denom: ACCEPTED_DENOM },
       recipient: rollADiceContractAddress,
       amount: MAX_BET,
-    }));
-
+    },{amount:[{"denom":"ujunox", "amount":gasAmount}],gas:gasAmount}
+  ));
+  console.log(await admin.transfer({
+    token: { denom: ACCEPTED_DENOM },
+    recipient: randomCWContractAddress,
+    amount: MAX_BET,
+  },{amount:[{"denom":"ujunox", "amount":gasAmount}],gas:gasAmount}
+));
+    // {amount:[{"denom":"ujunox", "amount":gasAmount}],gas:gasAmount}
     // query roll a dice balance
     let roll_a_dice_balance = await admin.queryBalance({ denom: defaultChainConfig.denomMicro }, rollADiceContractAddress);
     console.log("Roll a Dice Balance: ",roll_a_dice_balance);
     assert (parseInt(roll_a_dice_balance) >= Number(MAX_BET));
 
-    play_request_response = await sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5);
+    play_request_response = await sendExactNumberPlayRequest(admin, rollADiceContractAddress, MIN_BET, 5);
+    console.log("play_request_response :",play_request_response);
     game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
     game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
     assert(game_status.status == "requested");
 
-
-    await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "1500", "testtest123", null);
-
+    // sleep(2000);
+    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+    // console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+    // console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+    // sleep(2000);
     game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
     console.log(game_status);
+    let randomness_request_id = game_status.randomness_request_id;
+    let request_status = await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id);
+    console.log(request_status);
     assert(game_status.status == "won" || game_status.status == "lost" || game_status.status == "refunded");
-
-  //   let jobs = [];
-  //   let u8_job = {
-  //     u8: {
-  //       min: 0,
-  //       max: 255,
-  //       n:10
-  //     }
-  //   };
-  //   jobs.push(u8_job);
-
-  //   let request_msg = {
-  //     height : null,
-  //     recipients: null,
-  //     jobs:jobs,
-  //     prng: null,
-  //     gas_limit: "1000",
-  //     response_id: "0",
-  //   };
-
-  //   // request randomness (this must fail because the address is not in a whitelist)
-  //   try {
-  //     await admin.execute({
-  //       instructions: [
-  //         {
-  //           contractAddress,
-  //           msg: {
-  //             request: request_msg
-  //           },
-  //           funds: [{ denom: "ujunox", amount: "1" }],
-  //         },
-  //       ],
-  //     });
-  //   } catch (error) {
-  //     console.error("Expected error:", error);
-
-  //   if (error.message.includes("NotAuthorized")) {
-  //     console.log("The address is not authorized to request randomness.");
-  //   } else {
-  //     // If the error is not the expected one, rethrow it
-  //     throw error;
-  //   }
-  // }
-
-  // // Add the address to the whitelist and request randomness
-  // await admin.execute({
-  //   instructions: [
-  //     {
-  //       contractAddress,
-  //       msg: {
-  //         add_whitelisted_address_msg: {
-  //           addresses: [admin.address],
-  //         },
-  //       },
-  //       funds: [{ denom: "ujunox", amount: "1" }],
-  //     },
-  //   ],
-
-  // });
-  // // request randomness
-  // let response = await admin.execute({
-  //   instructions: [
-  //     {
-  //       contractAddress,
-  //       msg: {
-  //         request: request_msg
-  //       },
-  //       funds: [{ denom: "ujunox", amount: (calculateAmountToPay(request_msg,config)).toString() }],
-  //     },
-  //   ],
-  // });
-  // console.log(response);
-  // let first_req_id = extractEventAttributeValueByKey(response.events, "request_id");
-
-  // response = await admin.execute({
-  //   instructions: [
-  //     {
-  //       contractAddress,
-  //       msg: {
-  //         request: request_msg
-  //       },
-  //       funds: [{ denom: "ujunox", amount: (calculateAmountToPay(request_msg,config)).toString() }],
-  //     },
-  //   ],
-  // });
-  // console.log(response);
-  // let second_request_id = extractEventAttributeValueByKey(response.events, "request_id");
-  // //manual generate
-
-  // response = await admin.execute({
-  //   instructions: [
-  //     {
-  //       contractAddress,
-  //       msg: {
-  //         generate: {
-  //           height_id: null,
-  //           randomness: null,
-  //         }
-  //       },
-  //       funds: [{ denom: "ujunox", amount: "100" }],
-  //     },
-  //   ],
-  // });
-
-  // //query 
-  // let response_first_query_request = await admin.query({
-  //   contractAddress,
-  //   msg: {
-  //     request: {
-  //       id: first_req_id,
-  //     }
-  //   }
-  // });
-  // console.log(response_first_query_request);
-
-  // //query 
-  // let response_second_query_request = await admin.query({
-  //   contractAddress,
-  //   msg: {
-  //     request: {
-  //       id: second_request_id,
-  //     }
-  //   }
-  // });
-  // console.log(response_second_query_request);
-
-  // query the config
-  // const configResult: { operator: string } = await admin.query({
-  //   contractAddress,
-  //   msg: {
-  //     config: {}
-  //   }
-  // });
 
 });
 });

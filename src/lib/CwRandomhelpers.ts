@@ -68,5 +68,17 @@ export async function assertError(expectedError: string,fn: (...args: any[]) => 
           funds: funds,
         },
       ],
+      fee:{amount:[{"denom":"ujunox", "amount":"100000"}],gas:"500000"}
+    });
+  }
+
+  export async function queryRequestStatus(user:Agent, randomCWContractAddress, request_id: string) {
+    return user.query({
+      contractAddress: randomCWContractAddress,
+      msg: {
+        request: {
+          id: request_id,
+        },
+      },
     });
   }

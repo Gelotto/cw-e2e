@@ -6,11 +6,12 @@ import {
   UploadResult,
   InstantiateResult,
 } from "@cosmjs/cosmwasm-stargate";
-import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
-import { GasPrice } from "@cosmjs/stargate";
+import { DirectSecp256k1HdWallet, EncodeObject } from "@cosmjs/proto-signing";
+import { GasPrice, SigningStargateClient, coins } from "@cosmjs/stargate";
 import { Addr, Token } from "./types";
 import { readFile, writeFile } from "fs/promises";
 import { existsSync } from "fs";
+import { b64encodeObject } from "./helpers";
 
 export type ChainConfig = {
   rpc: string;
@@ -134,10 +135,28 @@ export default class Agent {
     fee?: "auto" | StdFee;
     memo?: string;
   }) {
+    //automatically compute the fee amount simulating the transaction
+    // let instr_array = instructions instanceof Array ? instructions : [instructions];
+    // const encodeObjects: EncodeObject[] = instr_array.map(instr => ({
+    //   typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+    //   value:{
+    //     sender: this.address,
+    //     contract: instr.contractAddress,
+    //     msg: b64encodeObject(instr.msg),
+    //     funds: instr.funds.map(fund => ({denom: fund.denom, amount: fund.amount.toString()})),
+    //   },
+    // }));
+    // console.log(encodeObjects);
+    // let expected_gas = await this.client.simulate(this.address, encodeObjects, "");
+    // // add 5% to the gas
+    // console.log("Expected gas: ", expected_gas);
+    // let bi_expected_gas = BigInt(expected_gas) * BigInt(105) / BigInt(100);
+    // // {amount:[{"denom":"ujunox", "amount":gasAmount}],gas:gasAmount}
     return await this.client.executeMultiple(
       this.address,
       instructions instanceof Array ? instructions : [instructions],
       fee ?? "auto",
+      // { amount:[{"denom":this.config.denomMicro,"amount":bi_expected_gas.toString()}], gas:bi_expected_gas.toString()},
       memo,
     );
   }
@@ -215,7 +234,7 @@ export default class Agent {
     token: Token;
     recipient: Addr;
     amount: string | BigInt;
-  }): Promise<ExecuteResult | unknown> {
+  }, fee?: StdFee): Promise<ExecuteResult | unknown> {
     token.address;
     if (token.address) {
       return await this.execute({
@@ -229,7 +248,7 @@ export default class Agent {
         this.address,
         recipient,
         [{ denom: token.denom, amount: amount.toString() }],
-        "auto",
+        fee ?? "auto",
       );
     }
   }
