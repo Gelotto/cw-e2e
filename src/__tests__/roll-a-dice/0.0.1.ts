@@ -298,10 +298,23 @@ describe(`roll-a-dice`, () => {
       requests.push(sendExactNumberPlayRequest(users[i], rollADiceContractAddress, MIN_BET, 6));
     }
     requests = await Promise.all(requests);
+
+    // get user1 and user2 balance
+    let user1_balance = await user1.queryBalance({ denom: defaultChainConfig.denomMicro }, user1.address);
+    let user2_balance = await user2.queryBalance({ denom: defaultChainConfig.denomMicro }, user2.address);
+    console.log("Pre generation User1 Balance: ",user1_balance);
+    console.log("Post generation User2 Balance: ",user2_balance);
+    let pre_gen_balances = [user1_balance, user2_balance];
+
     console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
     console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
     console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
 
+    let post_generation_user1_balance = await user1.queryBalance({ denom: defaultChainConfig.denomMicro }, user1.address);
+    let post_generation_user2_balance = await user2.queryBalance({ denom: defaultChainConfig.denomMicro }, user2.address);
+    console.log("Post generation User1 Balance: ",post_generation_user1_balance);
+    console.log("Post generation User2 Balance: ",post_generation_user2_balance);
+    let post_gen_balances = [post_generation_user1_balance, post_generation_user2_balance];
     let game_ids = [];
     let queries = [];
     let requests_ids = [];
@@ -319,9 +332,5 @@ describe(`roll-a-dice`, () => {
       console.log(await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id));
       assert(statuses[i].status == "won" || statuses[i].status == "lost" || statuses[i].status == "refunded");
     }
-
-
-
-
 });
 });
