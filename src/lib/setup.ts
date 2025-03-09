@@ -29,12 +29,14 @@ export default async function setup(
     const balance = parseInt(
       await user.queryBalance({ denom: defaultChainConfig.denomMicro }),
     );
+    console.log("User", user.address, " has balance ", balance);
     if (balance < 1e6) {
-      await admin.transfer({
+      console.log("Transfering funds ",(1e6 - balance).toFixed() ," to user", user.address);
+      console.log(await admin.transfer({
         token: { denom: defaultChainConfig.denomMicro },
         recipient: user.address,
         amount: (1e6 - balance).toFixed(),
-      });
+      },{amount:[{"denom":defaultChainConfig.denomMicro, "amount":"15000"}],gas:"200000"}));
     }
   }
 

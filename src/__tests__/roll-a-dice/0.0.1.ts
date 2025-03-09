@@ -19,9 +19,11 @@ import { Coin, StdFee } from "@cosmjs/amino";
 //   pub max_bet: String,
 // }
 const ACCEPTED_DENOM = defaultChainConfig.denomMicro;
-const GAS_LIMIT = "100000" // Maximum Expected gas that must be used to resolve the game
-const MIN_BET = "10000";
-const MAX_BET = "1000000";
+const GAS_LIMIT = "250000" // Maximum Expected gas that must be used to resolve the game
+// minimum bet must be an integer value of the gas limit divided by the gas price
+let min_bet = Number(GAS_LIMIT) * Number(defaultChainConfig.gasPrice.amount);
+const MIN_BET = (Math.ceil(min_bet)*5).toString();
+const MAX_BET = (Number(MIN_BET)*10).toString();
 const DISABLED = false;
 
 function getDefaultRollADiceConfigMsg(random_cw_address: string, operator: string | null) {
@@ -185,11 +187,12 @@ describe(`roll-a-dice`, () => {
       gas_to_token_ratio: BigInt(75).toString(), // it's 0.075
       gas_price_per_job: BigInt(1000).toString(),
       denom_accepted: "ujunox",
-      max_gas_per_block: BigInt(1000000).toString(),
+      max_gas_per_block: BigInt(2000000).toString(),
       operator: null,
       max_recipients: 10,
       max_job_per_request: 10,
       max_number_for_job: 10,
+      gas_offset: BigInt(100000).toString(),
     }
     const { contractAddress: randomCWContractAddress } = await admin.instantiate({
         codeId: codeId_cw_random,
@@ -271,6 +274,10 @@ describe(`roll-a-dice`, () => {
     console.log("play_request_response :",play_request_response);
     game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
     game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    console.log(game_status);
+    let randomness_request_id_1 = game_status.randomness_request_id;
+    let request_status_1 = await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id_1);
+    console.log(request_status_1);
     assert(game_status.status == "requested");
 
     // sleep(2000);
@@ -284,6 +291,37 @@ describe(`roll-a-dice`, () => {
     let request_status = await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id);
     console.log(request_status);
     assert(game_status.status == "won" || game_status.status == "lost" || game_status.status == "refunded");
+
+    let requests = [];
+    let users = [admin, user1, user2];
+    for (let i = 0; i < users.length; i++) {
+      requests.push(sendExactNumberPlayRequest(users[i], rollADiceContractAddress, MIN_BET, 6));
+    }
+    requests = await Promise.all(requests);
+    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+
+    let game_ids = [];
+    let queries = [];
+    let requests_ids = [];
+    console.log(requests);
+    for (let i = 0; i < users.length; i++) {
+      let game_id = extractEventAttributeValueByKey(requests[i].events, "game_id");
+      game_ids.push(game_id);
+      queries.push(queryGameStatus(user1, rollADiceContractAddress, game_id));
+    }
+    let statuses = await Promise.all(queries);
+
+    console.log(statuses);
+    for (let i = 0; i < users.length; i++) {
+      let randomness_request_id = statuses[i].randomness_request_id;
+      console.log(await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id));
+      assert(statuses[i].status == "won" || statuses[i].status == "lost" || statuses[i].status == "refunded");
+    }
+
+
+
 
 });
 });

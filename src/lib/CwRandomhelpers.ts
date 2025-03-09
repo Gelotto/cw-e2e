@@ -1,18 +1,35 @@
 import assert from "assert";
 import Agent from "./Agent";
 
+// let config = {
+//   gas_to_token_ratio: BigInt(75).toString(), // it's 0.075
+//   gas_price_per_job: BigInt(1000).toString(),
+//   denom_accepted: "ujunox",
+//   max_gas_per_block: BigInt(1000000).toString(),
+//   operator: null,
+//   max_recipients: 10,
+//   max_job_per_request: 10,
+//   max_number_for_job: 10,
+//   gas_offset: BigInt(100000).toString(),
+// }
+
 export function calculateAmountToPay(requestMsg, config) {
     let num_of_recipients = 1;
     if (requestMsg.recipients != null) {
       num_of_recipients = requestMsg.recipients.length;
     }
-    let gas_amount = requestMsg.gas_limit * num_of_recipients;
+    let gas_amount = Number(requestMsg.gas_limit) * num_of_recipients;
     let jobs_num = requestMsg.jobs.length;
-    let gas_price = config.gas_price_per_job;
-    let gas_to_token_ratio = config.gas_to_token_ratio;
+    let gas_price = Number(config.gas_price_per_job);
+    let gas_to_token_ratio = Number(config.gas_to_token_ratio);
     gas_amount += jobs_num * gas_price;
-    let token_amount = gas_amount * gas_to_token_ratio / 1000; 
-    return Math.floor(token_amount);
+    console.log("Gas amount to pay: ", gas_amount);
+    gas_amount += Number(config.gas_offset);
+    console.log("Gas amount to pay with offset: ", gas_amount);
+    let token_amount = Math.ceil(gas_amount * gas_to_token_ratio / 1000);
+    console.log("Token amount to pay: ", token_amount); 
+
+    return token_amount;
   }
 
 export function addAddressesToWhitelist(admin:Agent, randomCWContractAddress, addresses: string[]) {

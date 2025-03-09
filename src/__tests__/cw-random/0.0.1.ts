@@ -46,6 +46,7 @@ describe(`cw-random`, () => {
       max_recipients: 10,
       max_job_per_request: 10,
       max_number_for_job: 10,
+      gas_offset: BigInt(100000).toString(),
     }
     const { contractAddress } = await admin.instantiate({
       codeId,
