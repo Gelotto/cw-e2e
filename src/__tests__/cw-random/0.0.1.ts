@@ -62,7 +62,7 @@ describe(`cw-random`, () => {
     const configResult: { operator: string } = await admin.query({
       contractAddress,
       msg: {
-        config: {}
+        query_config: {}
       }
     });
     assert(configResult.operator == admin.address);

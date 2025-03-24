@@ -93,7 +93,7 @@ export async function assertError(expectedError: string,fn: (...args: any[]) => 
     return user.query({
       contractAddress: randomCWContractAddress,
       msg: {
-        request: {
+        query_request: {
           id: request_id,
         },
       },
