@@ -1,11 +1,16 @@
-import setup from "../../lib/setup";
-import Agent, { defaultChainConfig } from "../../lib/Agent";
+import setup from "../../../lib/setup";
+import Agent, { defaultChainConfig } from "../../../lib/Agent";
 import { faker } from "@faker-js/faker";
 import assert from "assert";
-import { b64encode, sleep } from "../../lib/helpers";
-import {calculateAmountToPay, addAddressesToWhitelist, assertError, manualGenerate, queryRequestStatus} from "../../lib/CwRandomhelpers";
-import { extractEventAttributeValueByKey } from "../../lib/helpers";
+import { b64encode, sleep } from "../../../lib/helpers";
+import {calculateAmountToPay, addAddressesToWhitelist, assertError, manualGenerate, queryRequestStatus} from "../../../lib/CwRandomhelpers";
+import { extractEventAttributeValueByKey } from "../../../lib/helpers";
 import { Coin, StdFee } from "@cosmjs/amino";
+import { CwRandomClient } from "./CwRandom.client";
+import { RollADiceClient } from "./RollADice.client";
+import { ConfigResponse as RollADiceConfigResponse} from "./RollADice.types";
+import { ConfigResponse as CwRandomConfigResponse } from "./CwRandom.types";
+
 
 // function to get default roll_a_dice config
 // pub struct ConfigMsg {
@@ -25,6 +30,20 @@ let min_bet = Number(GAS_LIMIT) * Number(defaultChainConfig.gasPrice.amount);
 const MIN_BET = (Math.ceil(min_bet)*5).toString();
 const MAX_BET = (Number(MIN_BET)*10).toString();
 const DISABLED = false;
+
+async function manualGenerateTSCodegen(admin:CwRandomClient, denom: string, amount: string | null,
+  randomness: string | null, height_id: string | null
+) {
+  let funds = [];
+  if (amount != "0" && amount != null) {
+    funds.push({ denom: denom, amount: amount });
+  }
+  return admin.generate({
+    heightId: height_id,
+    randomness: randomness,
+  }, {amount:[{"denom":"ujunox", "amount":"100000"}],gas:"500000"},
+  undefined, funds);
+}
 
 function getDefaultRollADiceConfigMsg(random_cw_address: string, operator: string | null) {
   return {
@@ -66,44 +85,44 @@ function fetchRandomCWConfig(admin:Agent, rollADiceContractAddress: string) {
 }
 
 
-function sendExactNumberPlayRequest(player:Agent, rollADiceContractAddress: string, funds: string, chosen_number: number) {
-  return player.execute({
-    instructions: [
-      {
-        contractAddress: rollADiceContractAddress,
-        msg: {
-          play_request: {
-            game_type: {
-              exact_number: {
-                chosen_number: chosen_number,
-              }
-            }
-          },
-        },
-        funds: [{ denom: ACCEPTED_DENOM, amount: funds }],
-      },
-    ],
-  });
+// function sendExactNumberPlayRequest(player:Agent, rollADiceContractAddress: string, funds: string, chosen_number: number) {
+//   return player.execute({
+//     instructions: [
+//       {
+//         contractAddress: rollADiceContractAddress,
+//         msg: {
+//           play_request: {
+//             game_type: {
+//               exact_number: {
+//                 chosen_number: chosen_number,
+//               }
+//             }
+//           },
+//         },
+//         funds: [{ denom: ACCEPTED_DENOM, amount: funds }],
+//       },
+//     ],
+//   });
+// }
+
+function sendExactNumberPlayRequest(player:RollADiceClient, denom:String, funds: string, chosen_number: number) {
+  return player.playRequest({
+    gameType: {
+      exact_number: {
+        chosen_number: chosen_number,
+      }
+    },
+  }, "auto", undefined, [{ denom: denom.toString(), amount: funds }])
 }
 
-function sendHighLowPlayRequest(player:Agent, rollADiceContractAddress: string, funds: string, dice_number: number) {
-  return player.execute({
-    instructions: [
-      {
-        contractAddress: rollADiceContractAddress,
-        msg: {
-          play_request: {
-            game_type: {
-              high_low: {
-                dice_number: dice_number,
-              }
-            }
-          },
-        },
-        funds: [{ denom: ACCEPTED_DENOM, amount: funds }],
-      },
-    ],
-  });
+function sendHighLowPlayRequest(player:RollADiceClient, denom:String, funds: string, dice_number: number) {
+  return player.playRequest({
+    gameType: {
+      high_low: {
+        dice_number: dice_number,
+      }
+    },
+  }, "auto", undefined, [{ denom: denom.toString(), amount: funds }])
 }
 
 function queryGameStatus(player:Agent, rollADiceContractAddress: string, game_id: string) {
@@ -156,13 +175,13 @@ describe(`roll-a-dice`, () => {
     admin = users[0];
     user1 = users[1];
     user2 = users[2];
-
+    await sleep(4000);
     codeId_cw_random = await admin.upload({
       contract: "cw-random",
       build: "dev",
       force: true,
     });
-
+    await sleep(3000);
     codeId_roll_a_dice = await admin.upload({
       contract: "roll-a-dice",
       build: "dev",
@@ -194,6 +213,9 @@ describe(`roll-a-dice`, () => {
       max_number_for_job: 10,
       gas_offset: BigInt(100000).toString(),
     }
+
+    
+    await sleep(3000);
     const { contractAddress: randomCWContractAddress } = await admin.instantiate({
         codeId: codeId_cw_random,
       msg: {
@@ -201,11 +223,11 @@ describe(`roll-a-dice`, () => {
         starting_seed: "testtest123",
       },
     });
-
+    let cw_random_admin_client = new CwRandomClient(admin.client, admin.address, randomCWContractAddress);
     
 
     console.log(randomCWContractAddress);
-
+    await sleep(3000);
     let roll_a_dice_config = getDefaultRollADiceConfigMsg(randomCWContractAddress, admin.address);
     const { contractAddress: rollADiceContractAddress } = await admin.instantiate({
       codeId: codeId_roll_a_dice,
@@ -213,51 +235,50 @@ describe(`roll-a-dice`, () => {
         config: roll_a_dice_config,
       },
     });
+    let roll_a_dice_admin_client = new RollADiceClient(admin.client, admin.address, rollADiceContractAddress);
+    let roll_a_dice_user1_client = new RollADiceClient(user1.client, user1.address, rollADiceContractAddress);
+    let roll_a_dice_user2_client = new RollADiceClient(user2.client, user2.address, rollADiceContractAddress);
 
-    // query the config
-    const configResult: { operator: string,
-      fee_percentage: string,
-      random_cw_address: string,
-      accepted_denom: string,
-      disabled: boolean,
-      min_bet: string,
-      gas_limit: string,
-      max_bet: string
-     } = await admin.query({
-      contractAddress: rollADiceContractAddress,
-      msg: {
-        config: {}
-      }
-    });
+    const configResult: RollADiceConfigResponse  = await roll_a_dice_admin_client.config();
+
     console.log(configResult);
     console.log(roll_a_dice_config);
     assertRollADiceConfig(configResult, roll_a_dice_config);
     // check error because CW Config is not fetched
-    // assertError("RandomConfigNotSet",() => sendExactNumberPlayRequest(user1, rollADiceContractAddress, MIN_BET, 5));
-    console.log(await fetchRandomCWConfig(admin, rollADiceContractAddress));
+    await sleep(3000);
+    assertError("RandomConfigNotSet",async () => await sendExactNumberPlayRequest(roll_a_dice_user1_client,ACCEPTED_DENOM,  MIN_BET, 5));
+    await sleep(3000);
+    console.log(await roll_a_dice_admin_client.fetchRandomCWConfig());
     // check error when the address is not in the whitelist, if roll-a-dice is not in the whitelist, it can't request randomness
     // so the play request is expected to fail and refunded
-    let play_request_response = await sendExactNumberPlayRequest(admin, rollADiceContractAddress, MIN_BET, 5);
+    await sleep(3000);
+    let play_request_response = await sendExactNumberPlayRequest(roll_a_dice_user1_client, ACCEPTED_DENOM, MIN_BET, 5);
     // query the game status
     let game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
-    let game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    let game_status = await roll_a_dice_user1_client.queryGame({
+      id: game_id
+    })
     console.log(game_status);
     assert(game_status.status == "refunded");
+    await sleep(3000);
+    console.log(await cw_random_admin_client.addWhitelistedAddressMsg({
+      addresses: [rollADiceContractAddress],
+    }));
 
-    console.log(await addAddressesToWhitelist(admin, randomCWContractAddress, [rollADiceContractAddress]));
 
     let admin_balance = await admin.queryBalance({ denom: defaultChainConfig.denomMicro }, admin.address);
     console.log("Admin Balance: ",admin_balance);
 
     // send some funds to the contract roll a dice to play
     const gasAmount = "100000";
-
+    await sleep(3000);
     console.log(await admin.transfer({
       token: { denom: ACCEPTED_DENOM },
       recipient: rollADiceContractAddress,
       amount: MAX_BET,
     },{amount:[{"denom":"ujunox", "amount":gasAmount}],gas:gasAmount}
   ));
+  await sleep(3000);
   console.log(await admin.transfer({
     token: { denom: ACCEPTED_DENOM },
     recipient: randomCWContractAddress,
@@ -270,32 +291,43 @@ describe(`roll-a-dice`, () => {
     console.log("Roll a Dice Balance: ",roll_a_dice_balance);
     assert (parseInt(roll_a_dice_balance) >= Number(MAX_BET));
 
-    play_request_response = await sendExactNumberPlayRequest(admin, rollADiceContractAddress, MIN_BET, 5);
+
+    await sleep(3000);
+    play_request_response = await sendExactNumberPlayRequest(roll_a_dice_admin_client, ACCEPTED_DENOM, MIN_BET, 5);
     console.log("play_request_response :",play_request_response);
     game_id = extractEventAttributeValueByKey(play_request_response.events, "game_id");
-    game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    game_status = await roll_a_dice_user1_client.queryGame({
+      id: game_id
+    });
     console.log(game_status);
     let randomness_request_id_1 = game_status.randomness_request_id;
-    let request_status_1 = await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id_1);
+    let request_status_1 = await cw_random_admin_client.queryRequest({
+      id: randomness_request_id_1
+    });
+    // let request_status_1 = await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id_1);
     console.log(request_status_1);
     assert(game_status.status == "requested");
 
-    // sleep(2000);
-    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
+    await sleep(3000);
+    console.log(await manualGenerateTSCodegen(cw_random_admin_client, ACCEPTED_DENOM, null, "testtest123", null));
     // console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
     // console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
-    // sleep(2000);
-    game_status = await queryGameStatus(user1, rollADiceContractAddress, game_id);
+    // await sleep(3000);
+    game_status = await roll_a_dice_user1_client.queryGame({
+      id: game_id
+    });
     console.log(game_status);
     let randomness_request_id = game_status.randomness_request_id;
-    let request_status = await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id);
+    let request_status = await cw_random_admin_client.queryRequest({
+      id: randomness_request_id
+    });
     console.log(request_status);
     assert(game_status.status == "won" || game_status.status == "lost" || game_status.status == "refunded");
 
     let requests = [];
-    let users = [admin, user1, user2];
+    let users = [roll_a_dice_admin_client, roll_a_dice_user1_client, roll_a_dice_user2_client];
     for (let i = 0; i < users.length; i++) {
-      requests.push(sendExactNumberPlayRequest(users[i], rollADiceContractAddress, MIN_BET, 6));
+      requests.push(sendExactNumberPlayRequest(users[i], ACCEPTED_DENOM, MIN_BET, 6));
     }
     requests = await Promise.all(requests);
 
@@ -306,10 +338,13 @@ describe(`roll-a-dice`, () => {
     console.log("Post generation User2 Balance: ",user2_balance);
     let pre_gen_balances = [user1_balance, user2_balance];
 
-    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
-    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
-    console.log(await manualGenerate(admin, randomCWContractAddress, ACCEPTED_DENOM, "0", "testtest123", null));
-
+    console.log(await manualGenerateTSCodegen(cw_random_admin_client, ACCEPTED_DENOM, null, "testtest123", null));
+    await sleep(3000);
+    console.log(await manualGenerateTSCodegen(cw_random_admin_client, ACCEPTED_DENOM, null, "testtest123", null));
+    await sleep(3000);
+    console.log(await manualGenerateTSCodegen(cw_random_admin_client, ACCEPTED_DENOM, null, "testtest123", null));
+    await sleep(3000);
+    
     let post_generation_user1_balance = await user1.queryBalance({ denom: defaultChainConfig.denomMicro }, user1.address);
     let post_generation_user2_balance = await user2.queryBalance({ denom: defaultChainConfig.denomMicro }, user2.address);
     console.log("Post generation User1 Balance: ",post_generation_user1_balance);
@@ -322,14 +357,20 @@ describe(`roll-a-dice`, () => {
     for (let i = 0; i < users.length; i++) {
       let game_id = extractEventAttributeValueByKey(requests[i].events, "game_id");
       game_ids.push(game_id);
-      queries.push(queryGameStatus(user1, rollADiceContractAddress, game_id));
+      queries.push(roll_a_dice_user1_client.queryGame(
+        {
+          id: game_id
+        }
+      ));
     }
     let statuses = await Promise.all(queries);
 
     console.log(statuses);
     for (let i = 0; i < users.length; i++) {
       let randomness_request_id = statuses[i].randomness_request_id;
-      console.log(await queryRequestStatus(user1, randomCWContractAddress, randomness_request_id));
+      console.log(await cw_random_admin_client.queryRequest({
+        id: randomness_request_id
+      }));
       assert(statuses[i].status == "won" || statuses[i].status == "lost" || statuses[i].status == "refunded");
     }
 });

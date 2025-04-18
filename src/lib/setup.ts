@@ -1,6 +1,6 @@
 import { fromMicroDenom, pretty, toMicroDenom } from "./helpers";
 import { globals } from "../lib/globals";
-import Agent, { defaultChainConfig } from "./Agent";
+import Agent, { ChainConfig, defaultChainConfig } from "./Agent";
 
 const ADMIN_MNEMONIC =
   "clip hire initial neck maid actor venue client foam budget lock catalog sweet " +
@@ -18,25 +18,36 @@ export default async function setup(
   { instantiateQuoteToken }: { instantiateQuoteToken: boolean } = {
     instantiateQuoteToken: true,
   },
+  {mnemonics} : {mnemonics: string[]} = {mnemonics: []},
+  config?: ChainConfig
 ): Promise<Agent[]> {
-  const admin = await Agent.connect(ADMIN_MNEMONIC);
-  const user1 = await Agent.connect(USER1_MNEMONIC);
-  const user2 = await Agent.connect(USER2_MNEMONIC);
-
-  // Ensure each user has a ujunox balance of at least 1 by transfering the
-  // difference from the admin account.
-  for (const user of [user1, user2]) {
-    const balance = parseInt(
-      await user.queryBalance({ denom: defaultChainConfig.denomMicro }),
-    );
-    console.log("User", user.address, " has balance ", balance);
-    if (balance < 1e6) {
-      console.log("Transfering funds ",(1e6 - balance).toFixed() ," to user", user.address);
-      console.log(await admin.transfer({
-        token: { denom: defaultChainConfig.denomMicro },
-        recipient: user.address,
-        amount: (1e6 - balance).toFixed(),
-      },{amount:[{"denom":defaultChainConfig.denomMicro, "amount":"15000"}],gas:"200000"}));
+  let admin, user1, user2: Agent;
+  console.log("Using mnemonics ",mnemonics ,"having length ", mnemonics.length);
+  if (mnemonics.length == 3) {
+    console.log("Using provided mnemonics");
+    admin = await Agent.connect(mnemonics[0], config);
+    user1 = await Agent.connect(mnemonics[1], config);
+    user2 = await Agent.connect(mnemonics[2], config);
+  } else {
+    admin = await Agent.connect(ADMIN_MNEMONIC);
+    user1 = await Agent.connect(USER1_MNEMONIC);
+    user2 = await Agent.connect(USER2_MNEMONIC);
+  
+    // Ensure each user has a ujunox balance of at least 1 by transfering the
+    // difference from the admin account.
+    for (const user of [user1, user2]) {
+      const balance = parseInt(
+        await user.queryBalance({ denom: defaultChainConfig.denomMicro }),
+      );
+      console.log("User", user.address, " has balance ", balance);
+      if (balance < 1e6) {
+        console.log("Transfering funds ",(1e6 - balance).toFixed() ," to user", user.address);
+        console.log(await admin.transfer({
+          token: { denom: defaultChainConfig.denomMicro },
+          recipient: user.address,
+          amount: (1e6 - balance).toFixed(),
+        },{amount:[{"denom":defaultChainConfig.denomMicro, "amount":"15000"}],gas:"200000"}));
+      }
     }
   }
 

@@ -107,9 +107,9 @@ export interface CwRandomInterface extends CwRandomReadOnlyInterface {
   }, fee_?: number | StdFee | "auto", memo_?: string, funds_?: Coin[]) => Promise<ExecuteResult>;
 }
 export class CwRandomClient extends CwRandomQueryClient implements CwRandomInterface {
-  client: SigningCosmWasmClient;
+  client: SigningCosmWasmClient = {} as SigningCosmWasmClient;
   sender: string;
-  contractAddress: string;
+  contractAddress: string = "";
   constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string) {
     super(client, contractAddress);
     this.client = client;

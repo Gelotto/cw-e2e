@@ -113,9 +113,9 @@ export interface RollADiceInterface extends RollADiceReadOnlyInterface {
   }, fee_?: number | StdFee | "auto", memo_?: string, funds_?: Coin[]) => Promise<ExecuteResult>;
 }
 export class RollADiceClient extends RollADiceQueryClient implements RollADiceInterface {
-  client: SigningCosmWasmClient;
+  client: SigningCosmWasmClient = {} as SigningCosmWasmClient;
   sender: string;
-  contractAddress: string;
+  contractAddress: string = "";
   constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string) {
     super(client, contractAddress);
     this.client = client;

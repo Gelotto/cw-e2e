@@ -18,6 +18,7 @@
     "@cosmjs/amino": "^0.33.0",
     "@cosmjs/cosmwasm-stargate": "^0.33.0",
     "@cosmjs/tendermint-rpc": "^0.33.0",
+    "@cosmwasm/ts-codegen": "^1.12.1",
     "@faker-js/faker": "^9.6.0",
     "ecpair": "^3.0.0",
     "tiny-secp256k1": "^2.2.3",

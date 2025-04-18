@@ -42,6 +42,15 @@ export const chainConfigs: Record<string, ChainConfig> = {
     decimals: 6,
     feeWallet: "",
   },
+  stargaze_testnet: {
+    rpc: "https://rpc.elgafar-1.stargaze-apis.com:443",
+    gasPrice: GasPrice.fromString("0.05ustars"),
+    prefix: "stars",
+    denomMicro: "ustars",
+    symbol: "STARS",
+    decimals: 6,
+    feeWallet: "",
+  },
   osmosis: {
     rpc: "https://osmosis-rpc.publicnode.com:443",
     gasPrice: GasPrice.fromString("0.025uosmo"),
@@ -93,6 +102,10 @@ export default class Agent {
     }
 
     return this.instances[key];
+  }
+
+  getClient(): SigningCosmWasmClient {
+    return this.client;
   }
 
   async instantiate({

@@ -51,8 +51,8 @@ export function pretty(state: any) {
   console.log(JSON.stringify(state, undefined, 2));
 }
 
-export function sleep(ms: number) {
-  new Promise((resolve) => setTimeout(resolve, ms));
+export async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function extractEventAttributeValue(
